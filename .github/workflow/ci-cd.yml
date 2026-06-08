@@ -1,0 +1,42 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.10'
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    
+    - name: Test backend imports
+      run: |
+        cd backend
+        python -c "import app; print('✅ Backend imports OK')"
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        pip install -r requirements.txt
+    
+    - name: Test frontend imports
+      run: |
+        cd frontend
+        python -c "import streamlit; print('✅ Frontend imports OK')"
+    
+    - name: Notify Success
+      run: echo "✅ CI/CD Pipeline Passed!"
