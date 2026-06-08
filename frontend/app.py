@@ -60,7 +60,7 @@ if submit_button:
         try:
             with st.spinner("⏳ جاري معالجة الفيديو..."):
                 response = requests.post(
-                    'https://youtube-summarizer-api-so0i.onrender.com/summarize',
+                    'https://youtube-summarizer-api-6hwt.onrender.com/summarize',
                     json={'url': url},
                     timeout=30
                 )
@@ -122,7 +122,7 @@ if submit_button:
                 st.error(f"❌ خطأ من السيرفر: {response.status_code}")
         
         except requests.exceptions.ConnectionError:
-            st.error("❌ لا يمكن الاتصال بـ Flask Server. تأكد من أنه يعمل على https://youtube-summarizer-api-so0i.onrender.com/summarize")
+            st.error("❌ لا يمكن الاتصال بـ Flask Server. تأكد من أنه يعمل على https://youtube-summarizer-api-6hwt.onrender.com/summarize")
         except requests.exceptions.Timeout:
             st.error("❌ انتهت مهلة الانتظار. حاول مرة أخرى.")
         except Exception as e:
