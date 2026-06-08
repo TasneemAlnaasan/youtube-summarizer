@@ -1,20 +1,23 @@
 FROM python:3.11-slim
 
-# Install system dependencies (including FFmpeg and basic build compilers)
+# التعديل 1: إضافة g++ لضمان بناء حزم Whisper دون أخطاء
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     build-essential \
     gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Upgrade pip and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
 COPY . .
 
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000"]
+# التعديل 2: فتح المنفذ 10000 وهو المنفذ الذي تتوقعه منصة Render
+EXPOSE 10000
+
+# التعديل 3: ربط Gunicorn بالمنفذ 10000 بدلاً من 5000
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]
