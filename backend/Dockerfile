@@ -1,5 +1,6 @@
 FROM python:3.10-slim
 
+# 1. تثبيت حزم النظام والمترجمات (gcc, g++, ffmpeg)
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     build-essential \
@@ -9,16 +10,18 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# التعديل هنا: نسخ ملف المتطلبات من مجلد backend المحلي
+# 2. نسخ ملف المتطلبات وتجهيز بيئة البناء
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip "setuptools<60.0.0" wheel
-RUN pip install --no-cache-dir -r requirements.txt
 
-# نسخ باقي الملفات
+# 3. تحديث الأدوات وتثبيت setuptools بالنسخة القياسية المستقرة
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# 4. تثبيت المتطلبات مع تعطيل العزل لضمان رؤية 'pkg_resources' أثناء بناء Whisper
+RUN pip install --no-cache-dir --no-build-isolation -r requirements.txt
+
+# 5. نسخ باقي ملفات المشروع
 COPY . .
 
 EXPOSE 10000
 
-# التعديل هنا: تشغيل التطبيق بالإشارة لمجلد backend إذا كان ملف app.py بداخله
-# إذا كان ملف app.py في المجلد الرئيسي مباشرة اتركيها "app:app"
 CMD ["gunicorn", "backend.app:app", "--bind", "0.0.0.0:10000"]
