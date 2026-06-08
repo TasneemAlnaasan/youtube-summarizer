@@ -1,14 +1,13 @@
 import re
 import os
 import subprocess
-from faster_whisper import WhisperModel  # 1️⃣ استيراد المكتبة الجديدة الخفيفة
+from faster_whisper import WhisperModel  
 from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
 from config import Config
 
 # تحميل Faster-Whisper model مرة واحدة بشكل ذكي وخفيف
 try:
-    # استخدام نموذج tiny مع معالجة int8 لتوفير الرام في سيرفر ريندر المجاني
     whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
     print("🤖 Faster-Whisper (Tiny) loaded successfully on CPU!")
 except Exception as e:
@@ -31,20 +30,14 @@ def get_youtube_transcript(video_id: str, use_mock: bool = False) -> str:
     """
     استخرج النص من الفيديو:
     1️⃣ محاولة أولى: YouTube Captions (سريع + مجاني)
-    2️⃣ محاولة ثانية: Faster-Whisper (سريع وخفيف على السيرفر المجاني)
+    2️⃣ محاولة ثانية: Faster-Whisper (عند عدم وجود الكابشن الجاهز)
     """
     if use_mock:
-        return """
-        Welcome to our YouTube Summarizer application.
-        This is a test video about artificial intelligence and machine learning.
-        We are building a powerful tool that extracts transcripts from YouTube videos.
-        The application uses Google Gemini API for summarization.
-        """
+        return "Welcome to our YouTube Summarizer application test transcript."
     
-    # محاولة 1: YouTube Captions
     print("📝 جاري محاولة استخراج Captions الجاهزة...")
     try:
-        # تصحيح طريقة الاستدعاء: استدعاء الدالة مباشرة من الـ Class دون عمل كائن (Object)
+        # التعديل الأول الصريح: جلب الكابشن مباشرة دون أي دالة 'list' قديمة
         captions = YouTubeTranscriptApi.get_transcript(video_id, languages=['ar', 'en'])
         texts = [item['text'] for item in captions]
         result = ' '.join(texts)
@@ -55,12 +48,12 @@ def get_youtube_transcript(video_id: str, use_mock: bool = False) -> str:
         print(f"❌ Captions not found or failed: {str(e)}")
         print("🎤 Switching to Faster-Whisper Speech-to-Text...")
         
-        # محاولة 2: Faster-Whisper
         try:
             return transcribe_with_whisper(video_id)
         except Exception as whisper_error:
             print(f"❌ Faster-Whisper also failed: {str(whisper_error)}")
-            return f"Error: Could not extract transcript - {str(whisper_error)}"
+            # نرفع الخطأ لكي يراه الباك إند ويتعامل معه بشكل صحيح
+            raise Exception(f"Could not extract transcript via Captions or Whisper. Details: {str(whisper_error)}")
 
 def transcribe_with_whisper(video_id: str) -> str:
     """استخدم Faster-Whisper لاستخراج النص من الصوت"""
@@ -72,17 +65,17 @@ def transcribe_with_whisper(video_id: str) -> str:
     
     try:
         print("🎤 جاري تحويل الصوت لنص بواسطة Faster-Whisper...")
-        # تشغيل التفريغ الصوتي (تلقائي للغة العربية والإنجليزية وبطريقة الـ segments المحدثة)
         segments, info = whisper_model.transcribe(audio_file, beam_size=5)
-        
-        # تجميع النصوص من كتل الـ segments المستخرجة
         transcript = "".join([segment.text for segment in segments])
         
+        # التأكد من أن النص ليس فارغاً
+        if not transcript.strip():
+            raise Exception("Whisper generated an empty transcript.")
+            
         print(f"✅ Transcription complete! Detected language: {info.language}")
         return transcript
         
     finally:
-        # احذف الملف المؤقت دائماً لتوفير مساحة القرص في السيرفر
         if os.path.exists(audio_file):
             os.remove(audio_file)
             print("🗑️ Cleaned up temporary files")
@@ -94,7 +87,7 @@ def download_youtube_audio(video_id: str) -> str:
     
     cmd = [
         "yt-dlp",
-        "-x",  # استخرج الصوت فقط
+        "-x",  
         "--audio-format", "mp3",
         "-o", output_file,
         youtube_url
@@ -110,15 +103,13 @@ def download_youtube_audio(video_id: str) -> str:
 
 def summarize_transcript(transcript: str, use_mock: bool = False) -> str:
     if use_mock:
-        return """
-        This video provides a comprehensive overview of AI engineering fundamentals.
-        It covers key concepts including prompt engineering, RAG systems,
-        and vector databases. The tutorial emphasizes best practices for API integration,
-        error handling, and deployment strategies.
-        """
+        return "This is a mock summary for testing purposes."
     try:
         genai.configure(api_key=Config.GOOGLE_API_KEY)
-        model = genai.GenerativeModel('gemini-pro')
+        
+        # التعديل الثاني الجوهري: تحديث النموذج إلى gemini-1.5-flash المدعوم حالياً ومجاناً
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
         prompt = f"""
         Please summarize the following video transcript in 3-5 clear and concise sentences.
         Focus on the main points and key takeaways.
