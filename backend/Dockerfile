@@ -1,6 +1,5 @@
 FROM python:3.10-slim
 
-# التعديل 1: إضافة g++ لضمان بناء حزم Whisper دون أخطاء
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     build-essential \
@@ -10,14 +9,16 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+# التعديل هنا: نسخ ملف المتطلبات من مجلد backend المحلي
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip "setuptools<60.0.0" wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
+# نسخ باقي الملفات
 COPY . .
 
-# التعديل 2: فتح المنفذ 10000 وهو المنفذ الذي تتوقعه منصة Render
 EXPOSE 10000
 
-# التعديل 3: ربط Gunicorn بالمنفذ 10000 بدلاً من 5000
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]
+# التعديل هنا: تشغيل التطبيق بالإشارة لمجلد backend إذا كان ملف app.py بداخله
+# إذا كان ملف app.py في المجلد الرئيسي مباشرة اتركيها "app:app"
+CMD ["gunicorn", "backend.app:app", "--bind", "0.0.0.0:10000"]
