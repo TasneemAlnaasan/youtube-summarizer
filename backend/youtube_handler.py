@@ -102,12 +102,13 @@ def download_youtube_audio(video_id: str) -> str:
         raise Exception(f"Failed to download audio via yt-dlp: {str(e)}")
 
 def summarize_transcript(transcript: str, use_mock: bool = False) -> str:
-    if use_mock:
-        return "This is a mock summary for testing purposes."
+    # إلغاء الـ mock تماماً حتى لو تم تمريره بـ True
+    use_mock = False 
+    
     try:
         genai.configure(api_key=Config.GOOGLE_API_KEY)
         
-        # التعديل الثاني الجوهري: تحديث النموذج إلى gemini-1.5-flash المدعوم حالياً ومجاناً
+        # كتابة الاسم الجديد بشكل صريح ومباشر بدون أي متغيرات
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
