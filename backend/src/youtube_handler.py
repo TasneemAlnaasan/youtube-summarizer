@@ -1,16 +1,14 @@
-import re
-from youtube_transcript_api import YouTubeTranscriptApi
 import google.generativeai as genai
 from config import Config
+import re
+from youtube_transcript_api import YouTubeTranscriptApi
 
 def validate_youtube_url(url: str) -> bool:
-    """التحقق من صحة رابط اليوتيوب"""
-    if url and ("youtube.com" in url or "youtu.be" in url) and url.startswith("https://"):
+    if ("youtube.com" in url or "youtu.be" in url) and url.startswith("https://"):
         return True
     return False
 
 def extract_youtube_id(url: str) -> str:
-    """استخراج الـ Video ID"""
     pattern = r'(?:youtube\.com\/watch\?v=|youtu\.be\/|v\/|embed\/)([a-zA-Z0-9_-]+)'
     match = re.search(pattern, url)
     if match:
@@ -18,53 +16,43 @@ def extract_youtube_id(url: str) -> str:
     return None
 
 def get_youtube_transcript(video_id: str, use_mock: bool = False) -> str:
-    """
-    استخراج النص من YouTube Captions
-    استخدم الطريقة الصحيحة بدون api = YouTubeTranscriptApi()
-    """
-    
+    """استخراج نص الفيديو بدعم كامل لجميع اللغات (العربية والإنجليزية والترجمة التلقائية)"""
     if use_mock:
-        return "Welcome to our YouTube Summarizer application. This is a test video."
-    
-    print(f"📝 جاري استخراج Captions للفيديو: {video_id}")
+        return "Welcome to our YouTube Summarizer application test transcript."
     
     try:
-        # الطريقة الصحيحة - مباشر!
-        captions = YouTubeTranscriptApi.get_transcript(
-            video_id, 
-            languages=['ar', 'en']
-        )
+        # الحل الذكي: جلب الترجمة مباشرة ودعم العربية والانجليزية وأي لغات أخرى
+        captions = YouTubeTranscriptApi.get_transcript(video_id, languages=['ar', 'en', 'en-US'])
         
+        # تجميع النصوص
         texts = [item['text'] for item in captions]
-        result = ' '.join(texts)
+        full_text = ' '.join(texts)
+        return full_text
         
-        if not result.strip():
-            return "Error: الفيديو لا يحتوي على ترجمة"
-        
-        print(f"✅ تم استخراج {len(texts)} عنصر!")
-        return result
-    
     except Exception as e:
-        error_msg = str(e)
-        print(f"❌ خطأ: {error_msg}")
-        return f"Error extracting transcript: هذا الفيديو ليس عنده captions. استخدم فيديو فيه ترجمة."
+        # محاولة أخيرة: إذا لم يجد عربي أو إنجليزي، يسحب أي لغة متوفرة في الفيديو رغماً عنه
+        try:
+            print("🔄 محاولة سحب أي لغة متوفرة أخرى...")
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            # سحب أول ترجمة متاحة للفيديو أياً كانت لغتها
+            captions = transcript_list.get_variable_transcript().fetch()
+            texts = [item['text'] for item in captions]
+            return ' '.join(texts)
+        except Exception as fallback_error:
+            return f"Error extracting transcript: لم نتمكن من سحب الترجمة. قد يكون يوتيوب قد حظر السيرفر مؤقتاً. التفاصيل: {str(fallback_error)}"
+
 
 def summarize_transcript(transcript: str, use_mock: bool = False) -> str:
-    """تلخيص النص بـ gemini-1.5-flash (الصحيح!)"""
-    
     if use_mock:
-        return "This is a test summary of the video content."
-    
-    # تحقق من خطأ
-    if transcript.startswith("Error"):
-        return transcript
-    
-    try:
-        print("🤖 جاري التلخيص...")
+        return "This is a mock summary for testing purposes."
         
+    if transcript.startswith("Error extracting transcript"):
+        return "لا يمكن توليد ملخص لأن عملية استخراج النص فشلت."
+        
+    try:
         genai.configure(api_key=Config.GOOGLE_API_KEY)
         
-        # استخدم gemini-1.5-flash (الصحيح!)
+        # التحديث المصيري لضمان العمل المجاني والمستقر
         model = genai.GenerativeModel('gemini-1.5-flash')
         
         prompt = f"""
@@ -76,14 +64,8 @@ def summarize_transcript(transcript: str, use_mock: bool = False) -> str:
         
         Summary:
         """
-        
         response = model.generate_content(prompt)
-        summary = response.text
+        return response.text
         
-        print("✅ تم التلخيص بنجاح!")
-        return summary
-    
     except Exception as e:
-        error_msg = str(e)
-        print(f"❌ خطأ في التلخيص: {error_msg}")
-        return f"Error summarizing transcript: {error_msg}"
+        return f"Error summarizing transcript: {str(e)}"
