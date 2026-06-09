@@ -52,79 +52,79 @@ with st.form(key='summarize_form'):
     )
 
 
-# معالجة الطلب
+
+            
+          # معالجة الطلب
 if submit_button:
     if not url:
-        st.error("❌ الرجاء إدخال رابط YouTube")
+        st.error(" ⚠️ الرجاء إدخال رابط YouTube")
     else:
         try:
-            with st.spinner("⏳ جاري معالجة الفيديو..."):
+            with st.spinner(" ⏳ جاري معالجة الفيديو واستدعاء الذكاء الاصطناعي..."):
                 response = requests.post(
                     'https://youtube-summarizer-api-isl5.onrender.com/summarize',
                     json={'url': url},
-                    timeout=30
+                    timeout=35
                 )
             
             if response.status_code == 200:
                 result = response.json()
                 
-                # تحقق من وجود error في النتيجة
+                # 1️⃣ فحص أول: هل الباك اند أرسل خطأ صريح في مفتاح 'error'؟
                 if 'error' in result:
-                    st.error(f"❌ خطأ: {result['error']}")
-                    except requests.exceptions.ConnectionError:
-                        st.error("❌ لا يمكن الاتصال بـ Flask Server. تأكد من أنه يعمل على https://youtube-summarizer-api-isl5.onrender.com/summarize")
-                    except requests.exceptions.Timeout:
-                        st.error("❌ انتهت مهلة الانتظار. حاول مرة أخرى.")
-                    except Exception as e:
-                        st.error(f"❌ حدث خطأ: {str(e)}")
+                    st.error(f" ❌ خطأ: {result['error']}")
+                
+                # 2️⃣ الفحص الذكي الجديد: هل النص المستخرج عبارة عن رسالة خطأ وحظر؟
+                elif "Error extracting transcript" in result.get('transcript', ''):
+                    st.error(" 🚫 عذراً، فشلت العملية! يوتيوب قام بحظر السيرفر مؤقتاً (Too Many Requests).")
+                    
+                    # عرض تفاصيل المشكلة بشكل أنيق للمطور دون إيهام المستخدم بالنجاح
+                    with st.expander("🔍 إظهار تفاصيل الخطأ الفني"):
+                        st.warning(result.get('transcript'))
+                        st.info(result.get('summary'))
+                
+                # 3️⃣ حالة النجاح الحقيقي الكامل 100%
                 else:
-                    # رسالة النجاح (بعد التأكد من النتائج)
-                    st.success("✅ تم التلخيص بنجاح!")
+                    st.success(" 🎉 تم التلخيص بنجاح !")
+                    st.balloons()
                     
-                    # عرض النتائج
-                    st.subheader("📊 النتائج")
-                    
+                    # عرض النتائج والإحصائيات
+                    st.subheader(" 📊 النتائج الحية")
                     col1, col2, col3 = st.columns(3)
                     
                     with col1:
                         video_id = result.get('video_id', 'N/A')
-                        if video_id and video_id != 'N/A':
-                            st.metric("Video ID", video_id[:10] + "...")
-                        else:
-                            st.metric("Video ID", "N/A")
+                        st.metric("Video ID", video_id if video_id else "N/A")
                     
                     with col2:
                         transcript = result.get('transcript', '')
                         transcript_length = len(transcript.split())
-                        st.metric("عدد الكلمات", transcript_length)
+                        st.metric("عدد كلمات الفيديو", transcript_length)
                     
                     with col3:
                         summary = result.get('summary', '')
                         summary_length = len(summary.split())
-                        st.metric("ملخص الكلمات", summary_length)
+                        st.metric("عدد كلمات الملخص", summary_length)
                     
                     st.divider()
                     
-                    # عرض النص والملخص
+                    # عرض النصوص المقروءة في صناديق منظمة
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        st.subheader("📄 النص الكامل")
-                        st.text_area(
-                            "Transcript",
-                            result.get('transcript', 'No transcript'),
-                            height=300,
-                            disabled=True,
-                            label_visibility="collapsed"
-                        )
+                        st.subheader(" 📄 النص الكامل المستخرج")
+                        st.text_area("Transcript", transcript, height=250, disabled=True, label_visibility="collapsed")
                     
                     with col2:
-                        st.subheader("✨ الملخص الذكي")
-                        st.info(result.get('summary', 'No summary'))
-                    
-                    st.balloons()
+                        st.subheader(" ✨ الملخص الذكي (Gemini)")
+                        st.info(summary)
             
             else:
-                st.error(f"❌ خطأ من السيرفر: {response.status_code}")
+                st.error(f" ❌ خطأ من السيرفر السحابي: كود الاستجابة {response.status_code}")
         
-        
+        except requests.exceptions.ConnectionError:
+            st.error(" 🔌 تعذر الاتصال بالباك اند. تأكد من أن سيرفر Render يعمل وحالته Live.")
+        except requests.exceptions.Timeout:
+            st.error(" ⏳ انتهت مهلة الانتظار (Timeout). السيرفر يستغرق وقتاً طويلًا للاستجابة.")
+        except Exception as e:
+            st.error(f" 🚨 حدث خطأ غير متوقع: {str(e)}")
