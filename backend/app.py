@@ -28,8 +28,8 @@ def summarize():
         return jsonify({'error': 'Invalid YouTube URL'})
     
     video_id = extract_youtube_id(youtube_url)
-    transcript = get_youtube_transcript(video_id, use_mock=True)
-    summary = summarize_transcript(transcript, use_mock=True)
+    transcript = get_youtube_transcript(video_id, use_mock=False)
+    summary = summarize_transcript(transcript, use_mock=False)
 
     return jsonify({
         'video_id': video_id,
