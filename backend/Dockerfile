@@ -1,27 +1,19 @@
-FROM python:3.10-slim
+# 🌟 التغيير الجوهري: الانتقال للنسخة الكاملة المجهزة بأدوات البناء تلقائياً
+FROM python:3.10
 
-# 1️⃣ تنظيف وتحديث حزم النظام مع تخطي الأخطاء المؤقتة للمستودعات السحابية
-RUN apt-get clean && \
-    apt-get update --allow-releaseinfo-change-error --fix-missing && \
-    apt-get install -y --no-install-recommends \
-    ffmpeg \
-    build-essential \
-    pkg-config \
-    libavformat-dev \
-    libavcodec-dev \
-    libavdevice-dev \
-    && rm -rf /var/lib/apt/lists/*
+# تثبيت ffmpeg فقط لمعالجة الصوت (هذه النسخة مستقرة جداً في التحديث)
+RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 2️⃣ تحديث أدوات بايثون الأساسية للـ Wheels
+# تحديث أدوات بايثون الأساسية
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# 3️⃣ نسخ وتثبيت الـ requirements بعد جاهزية النظام
+# نسخ وتثبيت الـ requirements
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4️⃣ تحديث أداة التنزيل لتخطي حظر يوتيوب
+# تحديث أداة التنزيل لتخطي حظر يوتيوب
 RUN pip install --no-cache-dir --upgrade yt-dlp
 
 COPY . .
