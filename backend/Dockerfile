@@ -1,20 +1,10 @@
 FROM python:3.10-slim
 
-# تثبيت ffmpeg والأدوات الأساسية للنظام لمعالجة الصوت
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
-# نسخ وتثبيت المتطلبات من مجلد backend
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-COPY . .
+COPY backend/ .
 
-EXPOSE 10000
-
-CMD ["gunicorn", "app:app", "--chdir", "backend", "--bind", "0.0.0.0:10000"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:5000"]
