@@ -71,6 +71,12 @@ if submit_button:
                 # تحقق من وجود error في النتيجة
                 if 'error' in result:
                     st.error(f"❌ خطأ: {result['error']}")
+                    except requests.exceptions.ConnectionError:
+                        st.error("❌ لا يمكن الاتصال بـ Flask Server. تأكد من أنه يعمل على https://youtube-summarizer-api-isl5.onrender.com/summarize")
+                    except requests.exceptions.Timeout:
+                        st.error("❌ انتهت مهلة الانتظار. حاول مرة أخرى.")
+                    except Exception as e:
+                        st.error(f"❌ حدث خطأ: {str(e)}")
                 else:
                     # رسالة النجاح (بعد التأكد من النتائج)
                     st.success("✅ تم التلخيص بنجاح!")
@@ -121,9 +127,4 @@ if submit_button:
             else:
                 st.error(f"❌ خطأ من السيرفر: {response.status_code}")
         
-        except requests.exceptions.ConnectionError:
-            st.error("❌ لا يمكن الاتصال بـ Flask Server. تأكد من أنه يعمل على https://youtube-summarizer-api-isl5.onrender.com/summarize")
-        except requests.exceptions.Timeout:
-            st.error("❌ انتهت مهلة الانتظار. حاول مرة أخرى.")
-        except Exception as e:
-            st.error(f"❌ حدث خطأ: {str(e)}")
+        
