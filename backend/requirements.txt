@@ -7,4 +7,4 @@ requests==2.31.0
 gunicorn==21.2.0
 yt-dlp
 pydub==0.25.1
-faster-whisper
+faster-whisper==0.10.0

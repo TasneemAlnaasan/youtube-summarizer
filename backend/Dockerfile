@@ -12,6 +12,8 @@ WORKDIR /app
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y ffmpeg build-essential
+RUN pip install --no-cache-dir --upgrade yt-dlp
 
 COPY . .
 
