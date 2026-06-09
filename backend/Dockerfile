@@ -1,9 +1,11 @@
-# 1️⃣ استخدام الصورة الكاملة المستقرة لمنع أخطاء التحديث
+# 1️⃣ استخدام الصورة الكاملة المستقرة لضمان وجود أدوات المترجم
 FROM python:3.10
 
-# 2️⃣ تثبيت ffmpeg وحزم التطوير الخاصة بـ libav المطلوبة لبناء مكتبة av بنجاح
+# 2️⃣ تثبيت ffmpeg وكل حزم التطوير والربط الخاصة بـ libav و بايثون
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    pkg-config \
+    python3-dev \
     libavformat-dev \
     libavcodec-dev \
     libavdevice-dev \
@@ -15,12 +17,12 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# 3️⃣ تحديث أدوات بايثون الأساسية للـ Wheels
+# 3️⃣ تحديث أدوات بايثون لأحدث إصدار لضمان التعامل السليم مع الأكواد المصدرية
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# 4️⃣ نسخ وتثبيت المتطلبات (الآن ستُبنى مكتبة av بسلام)
+# 4️⃣ نسخ ملف المتطلبات وتثبيته مع خيار كسر العناد للمكتبات المترجمة
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --no-binary :all: av || pip install --no-cache-dir -r requirements.txt
 
 # 5️⃣ تحديث أداة التنزيل لتخطي حظر يوتيوب
 RUN pip install --no-cache-dir --upgrade yt-dlp
