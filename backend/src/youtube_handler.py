@@ -1,16 +1,16 @@
-import re
-import os
-import subprocess
-from faster_whisper import WhisperModel  
 import google.generativeai as genai
 from config import Config
+import re
+from youtube_transcript_api import YouTubeTranscriptApi
 
 def validate_youtube_url(url: str) -> bool:
+    """التحقق من صحة رابط اليوتيوب المرسل"""
     if url and ("youtube.com" in url or "youtu.be" in url) and url.startswith("https://"):
         return True
     return False
 
 def extract_youtube_id(url: str) -> str:
+    """استخراج الـ Video ID من الرابط"""
     pattern = r'(?:youtube\.com\/watch\?v=|youtu\.be\/|v\/|embed\/)([a-zA-Z0-9_-]+)'
     match = re.search(pattern, url)
     if match:
@@ -18,71 +18,35 @@ def extract_youtube_id(url: str) -> str:
     return None
 
 def get_youtube_transcript(video_id: str, use_mock: bool = False) -> str:
-    """
-    تخطي مكتبة الكابشن المعرضة للحظر والاعتماد الكلي على معالجة الصوت بـ Faster-Whisper
-    لضمان استقرار التطبيق على Render 100%
-    """
+    """جلب الترجمة الحقيقية للفيديو مباشرة بدعم العربية والإنجليزية والتلقائية"""
     if use_mock:
         return "Welcome to our YouTube Summarizer application test transcript."
-        
-    print(f"🎬 جاري بدء معالجة الفيديو الحقيقي: {video_id}")
-    try:
-        return transcribe_with_whisper(video_id)
-    except Exception as whisper_error:
-        return f"Error extracting transcript: فشلت عملية معالجة وتفريغ الصوت. التفاصيل: {str(whisper_error)}"
-
-def transcribe_with_whisper(video_id: str) -> str:
-    """استدعاء الموديل بشكل ديناميكي لتوفير الذاكرة العشوائية ورام السيرفر"""
-    print("🤖 تحميل نموذج Faster-Whisper في الذاكرة العشوائية مؤقتاً...")
-    try:
-        local_whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
-    except Exception as model_err:
-        raise Exception(f"Failed to load Whisper Model: {str(model_err)}")
-        
-    audio_file = download_youtube_audio(video_id)
-    try:
-        print("🎤 جاري قراءة الصوت وتحويله إلى كلمات مكتوبة (Speech-to-Text)...")
-        segments, info = local_whisper_model.transcribe(audio_file, beam_size=5)
-        transcript = " ".join([segment.text for segment in segments])
-        
-        if not transcript.strip():
-            raise Exception("الملف الصوتي فارغ أو تعذر تفريغه.")
-            
-        print(f"✅ تم استخراج النص الكامل بنجاح! اللغة المكتشفة: {info.language}")
-        return transcript
-    finally:
-        if os.path.exists(audio_file):
-            os.remove(audio_file)
-            print("🗑️ تنظيف الملفات الصوتية المؤقتة من السيرفر.")
-
-def download_youtube_audio(video_id: str) -> str:
-    """تنزيل الصوت بأداة yt-dlp المتطورة لتخطي حجب يوتيوب لـ Render"""
-    youtube_url = f"https://www.youtube.com/watch?v={video_id}"
-    output_file = f"/tmp/{video_id}.mp3"
     
-    # استخدام سويتشات متطورة لتخطي حظر الـ IP الخاص بالمنصات السحابية
-    cmd = [
-        "yt-dlp",
-        "-x",  
-        "--audio-format", "mp3",
-        "--no-playlist",
-        "-o", output_file,
-        youtube_url
-    ]
+    print(f"📝 جاري جلب الترجمة للفيديو: {video_id}")
     try:
-        print("⏳ جاري تنزيل ملف الصوت من يوتيوب عبر yt-dlp المحدثة...")
-        subprocess.run(cmd, check=True, capture_output=True)
-        return output_file
-    except subprocess.CalledProcessError as e:
-        error_msg = e.stderr.decode() if e.stderr else str(e)
-        raise Exception(f"yt-dlp failed: {error_msg}")
+        # المحاولة الأولى: جلب الترجمة باللغات الأساسية المتوقعة (العربية أو الإنجليزية)
+        captions = YouTubeTranscriptApi.get_transcript(video_id, languages=['ar', 'en', 'en-US'])
+        texts = [item['text'] for item in captions]
+        return ' '.join(texts)
+        
+    except Exception as e:
+        try:
+            # المحاولة الثانية (الحل الذكي): إذا لم يجد اللغات السابقة، يسحب أول ترجمة متوفرة في الفيديو رغماً عنه (حتى لو تلقائية)
+            print("🔄 لم يجد العربية أو الإنجليزية مباشرة، جاري البحث عن أي ترجمة متاحة...")
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            captions = transcript_list.get_variable_transcript().fetch()
+            texts = [item['text'] for item in captions]
+            return ' '.join(texts)
+        except Exception as fallback_error:
+            return f"Error extracting transcript: لم نتمكن من سحب الترجمة. تأكدي أن الفيديو يحتوي على كابشن أو ترجمة مصاحبة فعلاً. التفاصيل: {str(fallback_error)}"
 
 def summarize_transcript(transcript: str, use_mock: bool = False) -> str:
+    """تلخيص النص الحقيقي المستخرج بواسطة نموذج gemini-1.5-flash المجاني والسريع"""
     if use_mock:
         return "This is a mock summary for testing purposes."
         
     if transcript.startswith("Error extracting transcript"):
-        return "لا يمكن توليد ملخص لأن عملية استخراج النص من الصوت فشلت."
+        return "لا يمكن توليد ملخص لأن عملية استخراج النص من الفيديو فشلت."
         
     try:
         genai.configure(api_key=Config.GOOGLE_API_KEY)
